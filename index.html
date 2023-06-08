@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Reconocimiento Facial</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f2f2f2;
+    }
+
+    .container {
+      position: relative;
+      width: 500px;
+      height: 500px;
+    }
+
+    #video, #canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #canvas {
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <script src="face-api/dist/face-api.js"></script>
+  <script>
+    // Código JavaScript para el reconocimiento facial
+    document.addEventListener('DOMContentLoaded', async () => {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+
+      const displaySize = { width: video.offsetWidth, height: video.offsetHeight };
+      faceapi.matchDimensions(canvas, displaySize);
+
+      await faceapi.loadSsdMobilenetv1Model('face-api/weights');
+      await faceapi.loadFaceLandmarkModel('face-api/weights');
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((error) => {
+          console.error('Error al acceder a la cámara:', error);
+        });
+
+      video.addEventListener('play', () => {
+        setInterval(async () => {
+          if (video.videoWidth !== 0 && video.videoHeight !== 0) {
+            const detections = await faceapi.detectAllFaces(video)
+              .withFaceLandmarks();
+
+            const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            faceapi.draw.drawDetections(canvas, resizedDetections);
+            faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+          }
+        }, 100);
+      });
+    });
+  </script>
+</body>
+</html>
